@@ -1,18 +1,43 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import LogoutButton from '@/components/LogoutButton'
 import Link from 'next/link'
+import LogoutButton from '@/components/LogoutButton'
 
+function getBadge(points: number) {
+  if (points >= 1000) return { label: 'Champion UrbanFlow', emoji: '⭐', color: 'text-yellow-600', bg: 'bg-yellow-50' }
+  if (points >= 500)  return { label: 'Citoyen Mobilisé', emoji: '🏆', color: 'text-purple-600', bg: 'bg-purple-50' }
+  if (points >= 100)  return { label: 'Explorateur Urbain', emoji: '🚇', color: 'text-blue-600', bg: 'bg-blue-50' }
+  return { label: 'Voyageur Débutant', emoji: '🌱', color: 'text-green-600', bg: 'bg-green-50' }
+}
+
+function getNextBadge(points: number) {
+  if (points < 100) return { next: 'Explorateur Urbain', needed: 100 - points }
+  if (points < 500) return { next: 'Citoyen Mobilisé', needed: 500 - points }
+  if (points < 1000) return { next: 'Champion UrbanFlow', needed: 1000 - points }
+  return null
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
+
+  // Récupérer les stats de l'utilisateur
+  const { data: stats } = await supabase
+    .from('user_stats')
+    .select('points, trips_count, co2_saved_kg')
+    .eq('user_id', user.id)
+    .single()
+
+  const points = stats?.points ?? 0
+  const tripsCount = stats?.trips_count ?? 0
+  const co2Saved = stats?.co2_saved_kg ?? 0
+  const badge = getBadge(points)
+  const nextBadge = getNextBadge(points)
+  const progressPct = nextBadge
+    ? Math.round(((points % (points < 100 ? 100 : points < 500 ? 500 : 1000)) / (points < 100 ? 100 : points < 500 ? 400 : 500)) * 100)
+    : 100
 
   const displayName = user.user_metadata?.full_name || user.email
 
@@ -36,12 +61,34 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">
           Bonjour, {displayName} 👋
         </h1>
-        <p className="text-gray-500 mb-8">Planifiez vos trajets multimodaux</p>
+        <p className="text-gray-500 mb-6">Planifiez vos trajets multimodaux</p>
+
+        {/* Badge utilisateur */}
+        <div className={`${badge.bg} rounded-2xl p-5 mb-6 flex items-center justify-between`}>
+          <div className="flex items-center gap-4">
+            <span className="text-4xl">{badge.emoji}</span>
+            <div>
+              <p className={`font-bold text-lg ${badge.color}`}>{badge.label}</p>
+              <p className="text-sm text-gray-500">{points} points UrbanFlow</p>
+            </div>
+          </div>
+          {nextBadge && (
+            <div className="hidden sm:block text-right">
+              <p className="text-xs text-gray-400 mb-1">Prochain badge : {nextBadge.next}</p>
+              <div className="w-32 h-2 bg-white rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 rounded-full transition-all"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">encore {nextBadge.needed} pts</p>
+            </div>
+          )}
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -52,9 +99,9 @@ export default async function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                 </svg>
               </div>
-              <span className="text-sm font-medium text-gray-500">Trajets effectués</span>
+              <span className="text-sm font-medium text-gray-500">Trajets planifiés</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900">0</p>
+            <p className="text-3xl font-bold text-gray-900">{tripsCount}</p>
           </div>
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -66,7 +113,7 @@ export default async function DashboardPage() {
               </div>
               <span className="text-sm font-medium text-gray-500">Points UrbanFlow</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900">0</p>
+            <p className="text-3xl font-bold text-gray-900">{points}</p>
           </div>
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -78,22 +125,22 @@ export default async function DashboardPage() {
               </div>
               <span className="text-sm font-medium text-gray-500">CO₂ économisé</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900">0 kg</p>
+            <p className="text-3xl font-bold text-gray-900">{Number(co2Saved).toFixed(1)} kg</p>
           </div>
         </div>
 
-        {/* CTA planifier */}
+        {/* CTA */}
         <div className="bg-gradient-to-r from-green-600 to-emerald-500 rounded-2xl p-8 text-white">
           <h2 className="text-xl font-bold mb-2">Planifier un trajet</h2>
           <p className="text-green-100 mb-4">
-            Trouvez le meilleur itinéraire multimodal en temps réel
+            Trouvez le meilleur itinéraire multimodal · Gagnez <strong>20 pts</strong> par trajet planifié
           </p>
-          <Link href="/dashboard/map" className="inline-block bg-white text-green-700 font-semibold px-6 py-3 rounded-xl hover:bg-green-50 transition">
-
-  Nouveau trajet →
-
-</Link>
-
+          <Link
+            href="/dashboard/map"
+            className="inline-block bg-white text-green-700 font-semibold px-6 py-3 rounded-xl hover:bg-green-50 transition"
+          >
+            Nouveau trajet →
+          </Link>
         </div>
       </main>
     </div>
