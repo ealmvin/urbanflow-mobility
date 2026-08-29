@@ -12,7 +12,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 })
 
-// Quelques arrêts de transport parisiens (données mockées)
 const TRANSPORT_STOPS = [
   { name: 'Gare de Lyon', lat: 48.8449, lng: 2.3735, type: 'train' },
   { name: 'Châtelet – Les Halles', lat: 48.8604, lng: 2.3469, type: 'metro' },
@@ -35,21 +34,24 @@ interface MapViewProps {
 export default function MapView({ onStopClick }: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Ref pour toujours avoir la dernière version du callback (évite le problème de closure)
+  const onStopClickRef = useRef(onStopClick)
+
+  useEffect(() => {
+    onStopClickRef.current = onStopClick
+  }, [onStopClick])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
-    // Centré sur Paris
     const map = L.map(containerRef.current).setView([48.8566, 2.3522], 12)
     mapRef.current = map
 
-    // Tuiles OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map)
 
-    // Marqueurs des arrêts
     TRANSPORT_STOPS.forEach((stop) => {
       const color = TYPE_COLORS[stop.type] || '#6b7280'
 
@@ -58,31 +60,27 @@ export default function MapView({ onStopClick }: MapViewProps) {
         html: `
           <div style="
             background:${color};
-            width:28px;height:28px;
+            width:32px;height:32px;
             border-radius:50%;
             border:3px solid white;
-            box-shadow:0 2px 6px rgba(0,0,0,0.3);
+            box-shadow:0 2px 8px rgba(0,0,0,0.3);
             display:flex;align-items:center;justify-content:center;
+            cursor:pointer;
           ">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
             </svg>
           </div>
         `,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
       })
 
       const marker = L.marker([stop.lat, stop.lng], { icon }).addTo(map)
-      marker.bindPopup(`
-        <div style="font-family:system-ui;padding:4px">
-          <strong style="color:${color}">${stop.name}</strong><br>
-          <span style="color:#6b7280;font-size:12px;text-transform:capitalize">${stop.type}</span>
-        </div>
-      `)
 
       marker.on('click', () => {
-        onStopClick?.({ name: stop.name, lat: stop.lat, lng: stop.lng })
+        // Utilise la ref pour toujours appeler la dernière version du callback
+        onStopClickRef.current?.({ name: stop.name, lat: stop.lat, lng: stop.lng })
       })
     })
 
@@ -90,7 +88,7 @@ export default function MapView({ onStopClick }: MapViewProps) {
       map.remove()
       mapRef.current = null
     }
-  }, [onStopClick])
+  }, []) // deps vide — la carte ne s'initialise qu'une fois
 
   return <div ref={containerRef} className="w-full h-full" />
 }
