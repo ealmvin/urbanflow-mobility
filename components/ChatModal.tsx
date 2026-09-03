@@ -15,6 +15,7 @@ interface Props {
   carpoolId: string
   carpoolLabel: string
   currentUserId: string | null
+  filterUserId?: string  // conducteur : filtrer sur un passager précis
   onClose: () => void
 }
 
@@ -22,7 +23,7 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function ChatModal({ carpoolId, carpoolLabel, currentUserId, onClose }: Props) {
+export default function ChatModal({ carpoolId, carpoolLabel, currentUserId, filterUserId, onClose }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -39,7 +40,14 @@ export default function ChatModal({ carpoolId, carpoolLabel, currentUserId, onCl
   useEffect(() => {
     fetch(`/api/messages?carpool_id=${carpoolId}`)
       .then(r => r.json())
-      .then(d => setMessages(d.messages ?? []))
+      .then(d => {
+        let msgs = d.messages ?? []
+        // Conducteur : ne montrer que les messages du passager sélectionné + ses propres réponses
+        if (filterUserId) {
+          msgs = msgs.filter((m: Message) => m.sender_id === filterUserId || m.sender_id === currentUserId)
+        }
+        setMessages(msgs)
+      })
     inputRef.current?.focus()
   }, [carpoolId])
 
@@ -62,8 +70,9 @@ export default function ChatModal({ carpoolId, carpoolLabel, currentUserId, onCl
         },
         (payload) => {
           const msg = payload.new as Message
+          // Filtrer si conducteur
+          if (filterUserId && msg.sender_id !== filterUserId && msg.sender_id !== currentUserId) return
           setMessages(prev => {
-            // Éviter les doublons
             if (prev.some(m => m.id === msg.id)) return prev
             return [...prev, msg]
           })

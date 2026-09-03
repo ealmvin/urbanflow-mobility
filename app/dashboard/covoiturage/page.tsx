@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import ChatModal from '@/components/ChatModal'
+import DriverInbox from '@/components/DriverInbox'
 import { createBrowserClient } from '@supabase/ssr'
 
 interface Carpool {
   id: string
+  driver_id: string
   driver_name: string
   from_address: string
   to_address: string
@@ -27,12 +29,13 @@ function formatTime(t: string) {
 }
 
 function CarpoolCard({
-  c, onBook, currentUserId, onChat,
+  c, onBook, currentUserId, onChat, onInbox,
 }: {
   c: Carpool
   onBook: (id: string) => void
   currentUserId: string | null
   onChat: (c: Carpool) => void
+  onInbox: (c: Carpool) => void
 }) {
   const [booking, setBooking] = useState(false)
   const [booked, setBooked] = useState(false)
@@ -90,30 +93,50 @@ function CarpoolCard({
           <span className="text-xs text-gray-400 ml-1">{c.seats_available} place{c.seats_available > 1 ? 's' : ''}</span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Bouton message */}
-          <button
-            onClick={() => onChat(c)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            Message
-          </button>
-          {/* Bouton réserver */}
-          <button
-            onClick={handleBook}
-            disabled={booking || booked || c.seats_available === 0}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-              booked
-                ? 'bg-green-100 text-green-700'
-                : c.seats_available === 0
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-700 text-white'
-            }`}
-          >
-            {booked ? '✓ Réservé' : booking ? '...' : 'Réserver'}
-          </button>
+          {currentUserId === c.driver_id ? (
+            /* C'est le conducteur — afficher badge + voir messages reçus */
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-3 py-1.5 rounded-xl">
+                🚗 Votre trajet
+              </span>
+              <button
+                onClick={() => onInbox(c)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Messages reçus
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Bouton message */}
+              <button
+                onClick={() => onChat(c)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Message
+              </button>
+              {/* Bouton réserver */}
+              <button
+                onClick={handleBook}
+                disabled={booking || booked || c.seats_available === 0}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                  booked
+                    ? 'bg-green-100 text-green-700'
+                    : c.seats_available === 0
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {booked ? '✓ Réservé' : booking ? '...' : 'Réserver'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -217,6 +240,7 @@ export default function CovoituragePage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'search' | 'create'>('search')
   const [chatCarpool, setChatCarpool] = useState<Carpool | null>(null)
+  const [inboxCarpool, setInboxCarpool] = useState<Carpool | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -239,13 +263,23 @@ export default function CovoituragePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Chat modal */}
+      {/* Chat passager */}
       {chatCarpool && (
         <ChatModal
           carpoolId={chatCarpool.id}
           carpoolLabel={`${chatCarpool.from_address} → ${chatCarpool.to_address}`}
           currentUserId={currentUserId}
           onClose={() => setChatCarpool(null)}
+        />
+      )}
+
+      {/* Boîte de réception conducteur */}
+      {inboxCarpool && currentUserId && (
+        <DriverInbox
+          carpoolId={inboxCarpool.id}
+          carpoolLabel={`${inboxCarpool.from_address} → ${inboxCarpool.to_address}`}
+          currentUserId={currentUserId}
+          onClose={() => setInboxCarpool(null)}
         />
       )}
 
@@ -300,6 +334,7 @@ export default function CovoituragePage() {
                   onBook={load}
                   currentUserId={currentUserId}
                   onChat={(carpool) => setChatCarpool(carpool)}
+                  onInbox={(carpool) => setInboxCarpool(carpool)}
                 />
               ))
             )}
