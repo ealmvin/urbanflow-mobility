@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const { data: carpool } = await supabase
     .from('carpools')
     .select('seats_available, driver_id, driver_name, from_address, to_address')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!carpool) return NextResponse.json({ error: 'Trajet introuvable' }, { status: 404 })
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   // Créer la réservation
   const { error: bookError } = await supabase.from('carpool_bookings').insert({
-    carpool_id: params.id,
+    carpool_id: id,
     passenger_id: user.id,
     passenger_name: passengerName,
     seats_booked,
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // Décrémenter les places
   await supabase.from('carpools').update({
     seats_available: carpool.seats_available - seats_booked,
-  }).eq('id', params.id)
+  }).eq('id', id)
 
   // Bonus points
   await supabase.from('user_stats').upsert(
