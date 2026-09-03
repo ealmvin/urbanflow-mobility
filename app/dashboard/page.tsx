@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
+import Co2Chart from '@/components/Co2Chart'
+import ReportForm from '@/components/ReportForm'
 
 function getBadge(points: number) {
   if (points >= 1000) return { label: 'Champion UrbanFlow', emoji: '⭐', color: 'text-yellow-600', bg: 'bg-yellow-50' }
@@ -129,18 +131,50 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="bg-gradient-to-r from-green-600 to-emerald-500 rounded-2xl p-8 text-white">
-          <h2 className="text-xl font-bold mb-2">Planifier un trajet</h2>
-          <p className="text-green-100 mb-4">
-            Trouvez le meilleur itinéraire multimodal · Gagnez <strong>20 pts</strong> par trajet planifié
-          </p>
-          <Link
-            href="/dashboard/map"
-            className="inline-block bg-white text-green-700 font-semibold px-6 py-3 rounded-xl hover:bg-green-50 transition"
-          >
-            Nouveau trajet →
+        {/* Accès rapide */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <Link href="/dashboard/map" className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition">
+            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-xl">🗺️</div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">Planifier</p>
+              <p className="text-xs text-gray-400">Itinéraire multimodal</p>
+            </div>
           </Link>
+          <Link href="/dashboard/covoiturage" className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition">
+            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-xl">🚗</div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">Covoiturage</p>
+              <p className="text-xs text-gray-400">Proposer / rejoindre</p>
+            </div>
+          </Link>
+        </div>
+
+        {/* Graphique CO₂ */}
+        <div className="mb-6">
+          <Co2Chart totalCo2={Number(co2Saved)} tripsCount={tripsCount} />
+        </div>
+
+        {/* CTA + Signalement */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="bg-gradient-to-r from-green-600 to-emerald-500 rounded-2xl p-8 text-white">
+            <h2 className="text-xl font-bold mb-2">Planifier un trajet</h2>
+            <p className="text-green-100 mb-4">
+              Itinéraire multimodal · Gagnez <strong>20 pts</strong> par trajet
+            </p>
+            <Link
+              href="/dashboard/map"
+              className="inline-block bg-white text-green-700 font-semibold px-6 py-3 rounded-xl hover:bg-green-50 transition"
+            >
+              Nouveau trajet →
+            </Link>
+          </div>
+
+          {/* Signalement */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">📢 Signaler un problème</h2>
+            <p className="text-xs text-gray-400 mb-4">Contribuez à améliorer la mobilité urbaine</p>
+            <ReportForm />
+          </div>
         </div>
       </main>
     </div>

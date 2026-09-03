@@ -22,60 +22,47 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Action inconnue' }, { status: 400 })
   }
 
-  // Upsert — crée la ligne si elle n'existe pas, met à jour sinon
-  const { data, error } = await supabase
+  // Récupérer la ligne existante
+  const { data: existing } = await supabase
     .from('user_stats')
-    .upsert(
-      {
+    .select('points, trips_count, co2_saved_kg')
+    .eq('user_id', user.id)
+    .single()
+
+  if (existing) {
+    // Incrémenter
+    const { data: updated, error: updateError } = await supabase
+      .from('user_stats')
+      .update({
+        points: existing.points + points,
+        trips_count: existing.trips_count + (action === 'plan_trip' ? 1 : 0),
+        co2_saved_kg: Number(existing.co2_saved_kg) + (action === 'plan_trip' ? 1.2 : 0),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user.id)
+      .select()
+      .single()
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+    return NextResponse.json({ points: updated?.points ?? 0, earned: points })
+  } else {
+    // Créer la ligne (premier trajet)
+    const { data: created, error: insertError } = await supabase
+      .from('user_stats')
+      .insert({
         user_id: user.id,
         points,
         trips_count: action === 'plan_trip' ? 1 : 0,
         co2_saved_kg: action === 'plan_trip' ? 1.2 : 0,
-      },
-      {
-        onConflict: 'user_id',
-        ignoreDuplicates: false,
-      }
-    )
-    .select()
-    .single()
-
-  if (error) {
-    // Si upsert ne supporte pas l'incrément, on fait manuellement
-    const { data: existing } = await supabase
-      .from('user_stats')
-      .select('points, trips_count, co2_saved_kg')
-      .eq('user_id', user.id)
+      })
+      .select()
       .single()
 
-    if (existing) {
-      const { data: updated } = await supabase
-        .from('user_stats')
-        .update({
-          points: existing.points + points,
-          trips_count: existing.trips_count + (action === 'plan_trip' ? 1 : 0),
-          co2_saved_kg: Number(existing.co2_saved_kg) + (action === 'plan_trip' ? 1.2 : 0),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
-        .select()
-        .single()
-      return NextResponse.json({ points: updated?.points ?? 0, earned: points })
-    } else {
-      // Créer la ligne
-      const { data: created } = await supabase
-        .from('user_stats')
-        .insert({
-          user_id: user.id,
-          points,
-          trips_count: action === 'plan_trip' ? 1 : 0,
-          co2_saved_kg: action === 'plan_trip' ? 1.2 : 0,
-        })
-        .select()
-        .single()
-      return NextResponse.json({ points: created?.points ?? points, earned: points })
+    if (insertError) {
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
+    return NextResponse.json({ points: created?.points ?? points, earned: points })
   }
-
-  return NextResponse.json({ points: data?.points ?? points, earned: points })
 }
