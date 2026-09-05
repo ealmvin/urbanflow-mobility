@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Step {
@@ -87,7 +87,49 @@ export default function JourneyResults({ fromName, toName, fromLat, fromLng, toL
   const [loading, setLoading] = useState(true)
   const [distanceKm, setDistanceKm] = useState(0)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [minimized, setMinimized] = useState(false)
+  const [dragY, setDragY] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const touchStartY = useRef(0)
   const router = useRouter()
+
+  // ── Touch (mobile) ──
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+    setDragging(true)
+  }, [])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const delta = e.touches[0].clientY - touchStartY.current
+    if (delta > 0) setDragY(delta)
+  }, [])
+
+  const handleTouchEnd = useCallback(() => {
+    setDragging(false)
+    if (dragY > 100) setMinimized(true)
+    setDragY(0)
+  }, [dragY])
+
+  // ── Mouse (desktop) ──
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    touchStartY.current = e.clientY
+    setDragging(true)
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = ev.clientY - touchStartY.current
+      if (delta > 0) setDragY(delta)
+    }
+    const onUp = (ev: MouseEvent) => {
+      setDragging(false)
+      const delta = ev.clientY - touchStartY.current
+      if (delta > 100) setMinimized(true)
+      setDragY(0)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -101,17 +143,68 @@ export default function JourneyResults({ fromName, toName, fromLat, fromLng, toL
       .catch(() => setLoading(false))
   }, [fromLat, fromLng, toLat, toLng, fromName, toName])
 
-  return (
-    <div className="fixed bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 flex items-start justify-between flex-shrink-0">
-        <div>
-          <p className="text-xs text-gray-400">Itinéraires · {distanceKm} km</p>
-          <h2 className="font-bold text-gray-900 leading-tight">
-            {fromName} <span className="text-gray-400 font-normal">→</span> {toName}
-          </h2>
+  // État minimisé : petit tab en bas
+  if (minimized) {
+    return (
+      <div
+        className="fixed bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-2xl shadow-2xl cursor-pointer"
+        onClick={() => setMinimized(false)}
+      >
+        {/* Poignée */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
-        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400">✕</button>
+        <div className="px-4 pb-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-400">{routes.length} itinéraires · {distanceKm} km</p>
+            <p className="font-semibold text-gray-900 text-sm">{fromName} → {toName}</p>
+          </div>
+          <div className="text-green-600 text-sm font-medium flex items-center gap-1">
+            Voir ↑
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col"
+      style={{
+        transform: `translateY(${dragY}px)`,
+        transition: dragging ? 'none' : 'transform 0.3s ease',
+      }}
+    >
+      {/* Header draggable (poignée + titre + boutons) */}
+      <div
+        className="px-4 pt-3 pb-2 border-b border-gray-100 flex-shrink-0 select-none cursor-grab active:cursor-grabbing"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+      >
+        {/* Pill */}
+        <div className="flex justify-center mb-2">
+          <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
+        </div>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs text-gray-400">Itinéraires · {distanceKm} km · <span className="text-gray-400">glissez pour réduire</span></p>
+            <h2 className="font-bold text-gray-900 leading-tight">
+              {fromName} <span className="text-gray-400 font-normal">→</span> {toName}
+            </h2>
+          </div>
+          <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()}>
+            <button
+              onClick={() => setMinimized(true)}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded-lg transition"
+              title="Réduire"
+            >
+              Réduire ↓
+            </button>
+            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 text-sm">✕</button>
+          </div>
+        </div>
       </div>
 
       <div className="overflow-y-auto flex-1 p-3 space-y-2">

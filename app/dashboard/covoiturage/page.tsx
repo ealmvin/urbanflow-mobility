@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import ChatModal from '@/components/ChatModal'
 import DriverInbox from '@/components/DriverInbox'
 import { createBrowserClient } from '@supabase/ssr'
@@ -29,18 +30,20 @@ function formatTime(t: string) {
 }
 
 function CarpoolCard({
-  c, onBook, currentUserId, onChat, onInbox,
+  c, onBook, currentUserId, onChat, onInbox, onAuthRequired,
 }: {
   c: Carpool
   onBook: (id: string) => void
   currentUserId: string | null
   onChat: (c: Carpool) => void
   onInbox: (c: Carpool) => void
+  onAuthRequired: () => void
 }) {
   const [booking, setBooking] = useState(false)
   const [booked, setBooked] = useState(false)
 
   const handleBook = async () => {
+    if (!currentUserId) { onAuthRequired(); return }
     setBooking(true)
     const res = await fetch(`/api/carpools/${c.id}/book`, {
       method: 'POST',
@@ -113,7 +116,7 @@ function CarpoolCard({
             <>
               {/* Bouton message */}
               <button
-                onClick={() => onChat(c)}
+                onClick={() => { if (!currentUserId) { onAuthRequired(); return } onChat(c) }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -236,12 +239,15 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
 }
 
 export default function CovoituragePage() {
+  const router = useRouter()
   const [carpools, setCarpools] = useState<Carpool[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'search' | 'create'>('search')
   const [chatCarpool, setChatCarpool] = useState<Carpool | null>(null)
   const [inboxCarpool, setInboxCarpool] = useState<Carpool | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+  const handleAuthRequired = () => router.push('/register')
 
   useEffect(() => {
     const supabase = createBrowserClient(
@@ -335,6 +341,7 @@ export default function CovoituragePage() {
                   currentUserId={currentUserId}
                   onChat={(carpool) => setChatCarpool(carpool)}
                   onInbox={(carpool) => setInboxCarpool(carpool)}
+                  onAuthRequired={handleAuthRequired}
                 />
               ))
             )}
