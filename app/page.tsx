@@ -88,10 +88,11 @@ export default function LandingPage() {
               color: 'bg-purple-50',
             },
             {
-              icon: '🚄',
-              title: 'Données SNCF',
-              desc: 'Trains, RER et Transilien en temps réel. Horaires officiels Navitia / IDFM.',
-              color: 'bg-red-50',
+              icon: '🚗',
+              title: 'Covoiturage communautaire',
+              desc: 'Proposez ou rejoignez des trajets entre citoyens. Messagerie temps réel intégrée.',
+              color: 'bg-orange-50',
+              href: '/dashboard/covoiturage',
             },
             {
               icon: '🌿',

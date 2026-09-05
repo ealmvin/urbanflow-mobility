@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Step {
   type: 'walk' | 'transit' | 'bike' | 'scooter' | 'car'
@@ -36,7 +37,7 @@ interface Route {
   summarySegments?: any[]
   nearbyStations?: { name: string; available: number; dist: number }[]
   isRealtime: boolean
-  // BlaBlaCar extras
+  redirectTo?: string
   driverRating?: number
   driverTrips?: number
   seatsLeft?: number
@@ -86,6 +87,7 @@ export default function JourneyResults({ fromName, toName, fromLat, fromLng, toL
   const [loading, setLoading] = useState(true)
   const [distanceKm, setDistanceKm] = useState(0)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     setLoading(true)
@@ -122,6 +124,45 @@ export default function JourneyResults({ fromName, toName, fromLat, fromLng, toL
 
         {!loading && routes.map((route) => {
           const isExpanded = expandedId === route.id
+
+          // Carte spéciale covoiturage → redirection vers la plateforme
+          if (route.type === 'carpool_platform') {
+            return (
+              <div key={route.id} className="rounded-2xl border-2 border-orange-200 bg-orange-50 overflow-hidden">
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🚗</span>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Covoiturage UrbanFlow</p>
+                        <p className="text-xs text-orange-600 font-medium">Plateforme communautaire</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-gray-900">{route.durationMin} min</p>
+                      <p className="text-xs text-gray-400">estimé</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-green-600 font-medium">🌿 -{route.co2SavedKg} kg CO₂ · {route.price}</span>
+                    <div className="px-2 py-0.5 rounded-full text-xs font-bold text-white bg-orange-500">
+                      +{route.points} pts
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => router.push('/dashboard/covoiturage')}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2"
+                  >
+                    Voir les trajets disponibles
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
           return (
             <div key={route.id} className={`rounded-2xl border-2 overflow-hidden transition-all ${isExpanded ? 'border-green-500' : 'border-gray-100'}`}>
               {/* Card header — toujours visible */}

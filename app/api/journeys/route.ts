@@ -173,76 +173,6 @@ function parseNavitiaJourney(
   }
 }
 
-// ── BlaBlaCar simulation réaliste ──────────────────────────────────────────
-function generateBlaBlaCar(
-  distanceKm: number,
-  co2Car: number,
-  fromName: string,
-  toName: string
-): any[] {
-  const durCar = Math.max(10, Math.round((distanceKm / 85) * 60)) // vitesse autoroute ~85km/h
-  const co2Carpool = distanceKm * CO2_FACTORS.carpool
-  const co2SavedCar = Math.max(0, co2Car - co2Carpool)
-  const pricePerKm = 0.06
-  const basePrice = Math.max(3, Math.round(distanceKm * pricePerKm * 10) / 10)
-
-  const now = new Date()
-  const dep1 = new Date(now.getTime() + 45 * 60000)
-  const dep2 = new Date(now.getTime() + 110 * 60000)
-  const fmt = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  const arr = (dep: Date) => new Date(dep.getTime() + durCar * 60000)
-
-  const drivers = [
-    { name: 'Thomas M.', rating: 4.9, trips: 142, car: 'Peugeot 308', seats: 2 },
-    { name: 'Sarah K.',  rating: 4.7, trips: 87,  car: 'Renault Clio', seats: 1 },
-  ]
-
-  return drivers.map((d, i) => {
-    const dep = i === 0 ? dep1 : dep2
-    const price = i === 0 ? basePrice : Math.round((basePrice * 0.9) * 10) / 10
-    return {
-      id: `blablacar-${i}`,
-      type: 'carpool',
-      label: `BlaBlaCar · ${d.name} · ${d.car}`,
-      emoji: '🚗',
-      color: '#00b2d5', // bleu BlaBlaCar
-      durationMin: durCar,
-      departureTime: fmt(dep),
-      arrivalTime: fmt(arr(dep)),
-      distanceKm: Math.round(distanceKm * 10) / 10,
-      co2Kg: Math.round(co2Carpool * 100) / 100,
-      co2SavedKg: Math.round(co2SavedCar * 100) / 100,
-      price: `${price} €`,
-      points: Math.round(co2SavedCar * 40),
-      driverRating: d.rating,
-      driverTrips: d.trips,
-      seatsLeft: d.seats,
-      steps: [
-        {
-          type: 'walk',
-          label: 'Marche vers le point de rendez-vous',
-          from: fromName,
-          to: 'Point de rendez-vous conducteur',
-          durationMin: 4,
-          distance: '300 m',
-        },
-        {
-          type: 'car',
-          label: `Covoiturage avec ${d.name} — ${d.car}`,
-          from: fromName,
-          to: toName,
-          durationMin: durCar,
-          distance: `${Math.round(distanceKm * 10) / 10} km`,
-        },
-      ],
-      summarySegments: [
-        { type: 'walk', duration: 4 },
-        { type: 'car', duration: durCar },
-      ],
-      isRealtime: false,
-    }
-  })
-}
 
 export async function GET(req: NextRequest) {
   const from = req.nextUrl.searchParams.get('from')
@@ -370,9 +300,30 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // ── BlaBlaCar ──
-  const bbcRoutes = generateBlaBlaCar(distanceKm, co2Car, fromName, toName)
-  routes.push(...bbcRoutes)
+  // ── Covoiturage UrbanFlow (plateforme interne) ──
+  const durCarpool = Math.max(10, Math.round((distanceKm / 70) * 60))
+  const co2Carpool = distanceKm * CO2_FACTORS.carpool
+  const co2SavedCarpool = Math.max(0, co2Car - co2Carpool)
+  const estimatedPrice = Math.round(distanceKm * 0.06 * 10) / 10
+  routes.push({
+    id: 'covoiturage-platform',
+    type: 'carpool_platform',
+    label: 'Covoiturage UrbanFlow',
+    emoji: '🚗',
+    color: '#f97316',
+    durationMin: durCarpool,
+    departureTime: '--',
+    arrivalTime: '--',
+    distanceKm: Math.round(distanceKm * 10) / 10,
+    co2Kg: Math.round(co2Carpool * 100) / 100,
+    co2SavedKg: Math.round(co2SavedCarpool * 100) / 100,
+    price: `~${estimatedPrice} € / place`,
+    points: Math.round(co2SavedCarpool * 40),
+    steps: [],
+    summarySegments: [{ type: 'car', duration: durCarpool }],
+    isRealtime: false,
+    redirectTo: '/dashboard/covoiturage',
+  })
 
   // ── Historique Supabase ──
   try {

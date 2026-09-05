@@ -30,7 +30,6 @@ export default function MapPage() {
   const [departureStop, setDepartureStop] = useState<StopInfo | null>(null)
   const [arrivalStop, setArrivalStop] = useState<StopInfo | null>(null)
   const [selecting, setSelecting] = useState<'departure' | 'arrival' | null>(null)
-  const [selectedStop, setSelectedStop] = useState<string | null>(null)
   const [showJourneys, setShowJourneys] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [gpsLoading, setGpsLoading] = useState(false)
@@ -52,20 +51,20 @@ export default function MapPage() {
   }
 
   const handleStopClick = useCallback((stop: StopInfo) => {
-    if (selecting === 'departure') {
+    if (!departureStop) {
       setDepartureStop(stop)
-      setSelecting('arrival')
       showToast(`Départ : ${stop.name}`)
-    } else if (selecting === 'arrival') {
+    } else if (!arrivalStop) {
       setArrivalStop(stop)
-      setSelecting(null)
+      setShowJourneys(false)
       showToast(`Destination : ${stop.name}`)
     } else {
-      setSelectedStop(stop.name)
-      addPoints('view_departures')
-      showToast('+5 pts — Consulter les départs 🚇')
+      // Les deux sont déjà définis : remplacer la destination
+      setArrivalStop(stop)
+      setShowJourneys(false)
+      showToast(`Nouvelle destination : ${stop.name}`)
     }
-  }, [selecting])
+  }, [departureStop, arrivalStop])
 
   const handleGPS = () => {
     if (!navigator.geolocation) {
@@ -96,7 +95,6 @@ export default function MapPage() {
   const handlePlanTrip = () => {
     if (!departureStop || !arrivalStop) return
     setShowJourneys(true)
-    setSelectedStop(null)
   }
 
   const handleSelectRoute = async (route: any) => {
@@ -109,7 +107,6 @@ export default function MapPage() {
     setArrivalStop(null)
     setShowJourneys(false)
     setSelecting(null)
-    setSelectedStop(null)
   }
 
   return (
@@ -217,13 +214,6 @@ export default function MapPage() {
       {/* Carte */}
       <div className="flex-1 relative">
         <MapView onStopClick={handleStopClick} />
-
-        {selectedStop && !showJourneys && (
-          <DeparturesPanel
-            stopName={selectedStop}
-            onClose={() => setSelectedStop(null)}
-          />
-        )}
 
         {showJourneys && departureStop && arrivalStop && (
           <JourneyResults
