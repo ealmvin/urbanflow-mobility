@@ -13,6 +13,7 @@ interface Report {
   id: string
   description: string
   type: string
+  address?: string
   created_at: string
 }
 
