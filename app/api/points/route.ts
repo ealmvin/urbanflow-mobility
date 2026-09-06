@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 const POINT_VALUES: Record<string, number> = {
+  open_map: 5,          // Ouvrir la carte
   view_departures: 5,   // Consulter les départs d'un arrêt
-  plan_trip: 20,        // Planifier un itinéraire
+  calculate_route: 10,  // Calculer un itinéraire
+  plan_trip: 20,        // Sélectionner et valider un itinéraire
+  submit_report: 15,    // Envoyer un signalement
   first_trip: 50,       // Premier trajet planifié (bonus)
 }
 

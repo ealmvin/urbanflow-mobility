@@ -5,8 +5,9 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import DeparturesPanel from '@/components/DeparturesPanel'
 import JourneyResults from '@/components/JourneyResults'
-import DisruptionsBanner from '@/components/DisruptionsBanner'
 import AddressSearch from '@/components/AddressSearch'
+import MapSidePanel from '@/components/MapSidePanel'
+import DisruptionsBanner from '@/components/DisruptionsBanner'
 import { createBrowserClient } from '@supabase/ssr'
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false })
@@ -33,6 +34,7 @@ export default function MapPage() {
   const [showJourneys, setShowJourneys] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [gpsLoading, setGpsLoading] = useState(false)
+  const [activeRoute, setActiveRoute] = useState<any | null>(null)
   const mapRef = useRef<{ setUserPosition: (lat: number, lng: number) => void } | null>(null)
 
   useEffect(() => {
@@ -41,7 +43,10 @@ export default function MapPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
     supabase.auth.getUser().then(({ data }) => {
-      setIsLoggedIn(!!data.user)
+      const loggedIn = !!data.user
+      setIsLoggedIn(loggedIn)
+      // +5 pts à l'ouverture de la carte
+      if (loggedIn) addPoints('open_map')
     })
   }, [])
 
@@ -95,11 +100,16 @@ export default function MapPage() {
   const handlePlanTrip = () => {
     if (!departureStop || !arrivalStop) return
     setShowJourneys(true)
+    if (isLoggedIn) addPoints('calculate_route')
   }
 
   const handleSelectRoute = async (route: any) => {
-    await addPoints('plan_trip')
-    showToast(`+${route.points} pts — ${route.emoji} ${route.label} ✓`)
+    if (isLoggedIn) {
+      await addPoints('plan_trip')
+      showToast(`+20 pts — ${route.emoji} ${route.label} ✓`)
+    } else {
+      showToast(`${route.emoji} ${route.label} sélectionné`)
+    }
   }
 
   const resetPlanner = () => {
@@ -107,10 +117,11 @@ export default function MapPage() {
     setArrivalStop(null)
     setShowJourneys(false)
     setSelecting(null)
+    setActiveRoute(null)
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="relative h-screen bg-gray-50 overflow-hidden">
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[2000] bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-full shadow-lg whitespace-nowrap">
@@ -118,102 +129,81 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 z-10">
-        <Link href={isLoggedIn ? '/dashboard' : '/'} className="text-gray-500 hover:text-gray-700">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </Link>
-        <div className="flex items-center gap-2 flex-1">
-          <div className="w-7 h-7 bg-green-600 rounded-lg flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+      {/* Header flottant */}
+      {/* Header + planner avec dégradé vert → transparent */}
+      <div className="absolute top-0 left-0 right-0 z-20" style={{ background: 'linear-gradient(180deg, rgba(11,31,18,0.95) 0%, rgba(11,31,18,0.95) 85%, rgba(11,31,18,0) 100%)', paddingBottom: '32px' }}>
+
+        {/* Titre */}
+        <div className="flex items-center justify-between px-4 pt-3.5 pb-3">
+          <Link
+            href={isLoggedIn ? '/dashboard' : '/'}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-          </div>
-          <span className="font-bold text-gray-900">Planifier un trajet</span>
+          </Link>
+          <span className="font-semibold text-white text-base">Planifier un trajet</span>
+          {(departureStop || arrivalStop) ? (
+            <button onClick={resetPlanner} className="text-xs text-white/60 hover:text-white transition px-3 py-1.5 rounded-full border border-white/20">
+              Réinitialiser
+            </button>
+          ) : <div className="w-20" />}
         </div>
-        {(departureStop || arrivalStop) && (
-          <button onClick={resetPlanner} className="text-xs text-gray-400 hover:text-red-500 transition">
-            Réinitialiser
-          </button>
+
+        {isLoggedIn === false && (
+          <div className="mx-4 mb-2 rounded-xl bg-amber-500/20 border border-amber-400/30 px-3 py-2 flex items-center justify-between">
+            <p className="text-xs text-amber-200">🏆 <span className="font-medium">Connecte-toi</span> pour gagner des points</p>
+            <div className="flex items-center gap-2">
+              <Link href="/login" className="text-xs text-amber-300 font-semibold">Connexion</Link>
+              <Link href="/register" className="text-xs bg-amber-500 text-white px-2.5 py-1 rounded-lg font-semibold">S'inscrire</Link>
+            </div>
+          </div>
         )}
-      </header>
 
-      {/* Alertes perturbations */}
-      <DisruptionsBanner />
-
-      {/* Banner non connecté */}
-      {isLoggedIn === false && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between">
-          <p className="text-xs text-amber-800">
-            🏆 <span className="font-medium">Connecte-toi</span> pour gagner des points à chaque trajet
-          </p>
+        {/* Inputs */}
+        <div className="px-4 pb-1 space-y-2">
           <div className="flex items-center gap-2">
-            <Link href="/login" className="text-xs text-amber-700 font-semibold hover:underline">Connexion</Link>
-            <span className="text-amber-300">·</span>
-            <Link href="/register" className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg font-semibold transition">S'inscrire</Link>
-          </div>
-        </div>
-      )}
-
-      {/* Planificateur */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
-        <div className="max-w-2xl mx-auto space-y-2">
-          {/* Départ avec recherche + GPS */}
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-green-600 flex-shrink-0" />
+            <div className="w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0" />
             <AddressSearch
               placeholder="Adresse ou station de départ…"
               value={departureStop?.name ?? ''}
-              color="green"
-              gpsButton
-              gpsLoading={gpsLoading}
-              onGPS={handleGPS}
-              onSelect={(place) => {
-                setDepartureStop(place)
-                setShowJourneys(false)
-                showToast(`Départ : ${place.name}`)
-              }}
+              color="green" gpsButton gpsLoading={gpsLoading} onGPS={handleGPS} dark
+              onSelect={(place) => { setDepartureStop(place); setShowJourneys(false); showToast(`Départ : ${place.name}`) }}
               onClear={() => { setDepartureStop(null); setShowJourneys(false) }}
             />
           </div>
-
-          {/* Destination */}
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-red-600 flex-shrink-0" />
+            <div className="w-2.5 h-2.5 rounded-full bg-red-400 flex-shrink-0" />
             <AddressSearch
               placeholder="Adresse ou station d'arrivée…"
               value={arrivalStop?.name ?? ''}
-              color="red"
-              onSelect={(place) => {
-                setArrivalStop(place)
-                setShowJourneys(false)
-                showToast(`Destination : ${place.name}`)
-              }}
+              color="red" dark
+              onSelect={(place) => { setArrivalStop(place); setShowJourneys(false); showToast(`Destination : ${place.name}`) }}
               onClear={() => { setArrivalStop(null); setShowJourneys(false) }}
             />
-            <div className="w-0" />
           </div>
-
-          <p className="text-xs text-center text-gray-400">
-            Tapez une adresse ou cliquez un arrêt sur la carte
-          </p>
-
           {departureStop && arrivalStop && !showJourneys && (
-            <button
-              onClick={handlePlanTrip}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl text-sm transition"
-            >
-              🔍 Calculer les itinéraires multimodaux
+            <button onClick={handlePlanTrip} className="w-full bg-green-500 hover:bg-green-400 text-white font-semibold py-2.5 rounded-xl text-sm transition mt-1">
+              🔍 Calculer les itinéraires
             </button>
           )}
         </div>
+
       </div>
 
-      {/* Carte */}
-      <div className="flex-1 relative">
-        <MapView onStopClick={handleStopClick} />
+
+      {/* Panel latéral — alertes + signalements */}
+      <MapSidePanel />
+
+      {/* Carte — plein écran, isolée dans son propre contexte d'empilement */}
+      <div className="absolute inset-0" style={{ zIndex: 0, isolation: 'isolate' }}>
+        <MapView
+          onStopClick={handleStopClick}
+          routeFrom={activeRoute && departureStop ? { lat: departureStop.lat, lng: departureStop.lng } : null}
+          routeTo={activeRoute && arrivalStop ? { lat: arrivalStop.lat, lng: arrivalStop.lng } : null}
+          routeType={activeRoute?.type}
+        />
 
         {showJourneys && departureStop && arrivalStop && (
           <JourneyResults
@@ -223,8 +213,9 @@ export default function MapPage() {
             fromLng={departureStop.lng}
             toLat={arrivalStop.lat}
             toLng={arrivalStop.lng}
-            onClose={() => setShowJourneys(false)}
+            onClose={() => { setShowJourneys(false); setActiveRoute(null) }}
             onSelectRoute={handleSelectRoute}
+            onRouteActive={setActiveRoute}
           />
         )}
       </div>

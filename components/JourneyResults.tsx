@@ -52,6 +52,7 @@ interface Props {
   toLng: number
   onClose: () => void
   onSelectRoute: (route: Route) => void
+  onRouteActive?: (route: Route | null) => void
 }
 
 function StepIcon({ type, lineColor }: { type: string; lineColor?: string }) {
@@ -82,7 +83,27 @@ function SummaryPill({ seg }: { seg: any }) {
   )
 }
 
-export default function JourneyResults({ fromName, toName, fromLat, fromLng, toLat, toLng, onClose, onSelectRoute }: Props) {
+const GMAPS_MODE: Record<string, string> = {
+  walk: 'walking',
+  velo: 'bicycling',
+  trottinette: 'bicycling',
+  transit: 'transit',
+  train: 'transit',
+  carpool: 'driving',
+  carpool_platform: 'driving',
+}
+
+function openNavigation(fromLat: number, fromLng: number, toLat: number, toLng: number, type: string) {
+  const mode = GMAPS_MODE[type] ?? 'transit'
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  if (isIOS) {
+    window.open(`https://maps.apple.com/?saddr=${fromLat},${fromLng}&daddr=${toLat},${toLng}&dirflg=${mode === 'walking' ? 'w' : mode === 'bicycling' ? 'b' : 'r'}`, '_blank')
+  } else {
+    window.open(`https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&travelmode=${mode}`, '_blank')
+  }
+}
+
+export default function JourneyResults({ fromName, toName, fromLat, fromLng, toLat, toLng, onClose, onSelectRoute, onRouteActive }: Props) {
   const [routes, setRoutes] = useState<Route[]>([])
   const [loading, setLoading] = useState(true)
   const [distanceKm, setDistanceKm] = useState(0)
@@ -264,7 +285,12 @@ export default function JourneyResults({ fromName, toName, fromLat, fromLng, toL
                 onClick={() => {
                   const next = isExpanded ? null : route.id
                   setExpandedId(next)
-                  if (next) onSelectRoute(route)
+                  if (next) {
+                    onSelectRoute(route)
+                    onRouteActive?.(route)
+                  } else {
+                    onRouteActive?.(null)
+                  }
                 }}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -355,6 +381,25 @@ export default function JourneyResults({ fromName, toName, fromLat, fromLng, toL
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
                   </a>
+                </div>
+              )}
+
+              {/* Bouton navigation GPS */}
+              {isExpanded && (
+                <div className="px-4 pb-3 bg-white border-t border-gray-100 pt-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openNavigation(fromLat, fromLng, toLat, toLng, route.type)
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-md"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    Démarrer la navigation GPS
+                  </button>
+                  <p className="text-center text-xs text-gray-400 mt-1.5">Ouverture dans Google Maps · Apple Maps</p>
                 </div>
               )}
 

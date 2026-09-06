@@ -309,7 +309,7 @@ export default function CovoituragePage() {
             className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${tab === 'search' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
             🔍 Trajets disponibles
           </button>
-          <button onClick={() => setTab('create')}
+          <button onClick={() => { if (!currentUserId) { handleAuthRequired(); return } setTab('create') }}
             className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${tab === 'create' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
             ➕ Proposer un trajet
           </button>
@@ -327,7 +327,7 @@ export default function CovoituragePage() {
                 <p className="text-4xl mb-3">🚗</p>
                 <p className="font-semibold text-gray-600">Aucun trajet disponible</p>
                 <p className="text-sm text-gray-400 mt-1">Soyez le premier à proposer un trajet !</p>
-                <button onClick={() => setTab('create')}
+                <button onClick={() => { if (!currentUserId) { handleAuthRequired(); return } setTab('create') }}
                   className="mt-4 bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-semibold hover:bg-green-700 transition">
                   Proposer un trajet
                 </button>

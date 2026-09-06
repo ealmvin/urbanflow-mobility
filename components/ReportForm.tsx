@@ -29,6 +29,12 @@ export default function ReportForm({ onClose }: { onClose?: () => void }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, description, address }),
       })
+      // +15 pts pour un signalement
+      fetch('/api/points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'submit_report' }),
+      }).catch(() => {})
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)

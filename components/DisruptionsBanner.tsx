@@ -34,14 +34,14 @@ export default function DisruptionsBanner() {
   const d = disruptions[current]
 
   const colors = {
-    info: 'bg-blue-50 border-blue-200 text-blue-800',
-    warning: 'bg-amber-50 border-amber-300 text-amber-900',
-    critical: 'bg-red-50 border-red-300 text-red-900',
+    info: 'bg-blue-500/20 border-blue-400/30 text-blue-100',
+    warning: 'bg-amber-500/20 border-amber-400/30 text-amber-100',
+    critical: 'bg-red-500/20 border-red-400/30 text-red-100',
   }
   const icons = { info: 'ℹ️', warning: '⚠️', critical: '🚨' }
 
   return (
-    <div className={`border-b px-4 py-2 flex items-center justify-between gap-2 transition-all ${colors[d.level]}`}>
+    <div className={`border rounded-xl px-3 py-2 flex items-center justify-between gap-2 transition-all ${colors[d.level]}`}>
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <span className="text-base flex-shrink-0">{icons[d.level]}</span>
         <div className="min-w-0">

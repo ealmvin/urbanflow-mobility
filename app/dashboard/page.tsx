@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
+import Logo from '@/components/Logo'
 import Co2Chart from '@/components/Co2Chart'
 import ReportForm from '@/components/ReportForm'
 
@@ -44,106 +45,115 @@ export default async function DashboardPage() {
   const displayName = user.user_metadata?.full_name || user.email
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#f8f9fa]">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+          <Logo href="/" size={32} />
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              </svg>
-            </div>
-            <span className="font-bold text-gray-900 text-lg">UrbanFlow</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-400 hidden sm:block">{user.email}</span>
+            <span className="text-sm text-gray-400 hidden sm:block font-medium">{user.email}</span>
             <LogoutButton />
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">
-          Bonjour, {displayName} 👋
-        </h1>
-        <p className="text-gray-500 mb-6">Planifiez vos trajets multimodaux</p>
+      <main id="main-content" className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+
+        {/* Greeting */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight mb-0.5">
+            Bonjour, {displayName} <span aria-hidden="true">👋</span>
+          </h1>
+          <p className="text-gray-500 text-sm">Tableau de bord · Mobilité multimodale IDF</p>
+        </div>
 
         {/* Badge utilisateur */}
-        <div className={`${badge.bg} rounded-2xl p-5 mb-6 flex items-center justify-between`}>
+        <div className="bg-gradient-to-br from-[#0B1F12] to-[#16401f] rounded-2xl p-6 mb-6 flex items-center justify-between text-white shadow-lg">
           <div className="flex items-center gap-4">
-            <span className="text-4xl">{badge.emoji}</span>
+            <span className="text-4xl" aria-hidden="true">{badge.emoji}</span>
             <div>
-              <p className={`font-bold text-lg ${badge.color}`}>{badge.label}</p>
-              <p className="text-sm text-gray-500">{points} points UrbanFlow</p>
+              <p className="font-black text-lg text-white tracking-tight">{badge.label}</p>
+              <p className="text-green-400 text-sm font-semibold">{points} points UrbanFlow</p>
             </div>
           </div>
           {nextBadge && (
             <div className="hidden sm:block text-right">
-              <p className="text-xs text-gray-400 mb-1">Prochain badge : {nextBadge.next}</p>
-              <div className="w-32 h-2 bg-white rounded-full overflow-hidden">
+              <p className="text-xs text-gray-400 mb-2">Prochain : {nextBadge.next}</p>
+              <div className="w-36 h-1.5 bg-white/10 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-green-500 rounded-full transition-all"
+                  role="progressbar"
+                  aria-valuenow={progressPct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`Progression vers ${nextBadge?.next} : ${progressPct}%`}
+                  className="h-full bg-green-400 rounded-full transition-all"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-400 mt-1">encore {nextBadge.needed} pts</p>
+              <p className="text-xs text-gray-500 mt-1.5">encore {nextBadge.needed} pts</p>
             </div>
           )}
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-500">Trajets planifiés</span>
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Trajets</p>
+            <div className="flex items-end gap-1">
+              <p className="text-3xl font-black text-gray-900">{tripsCount}</p>
             </div>
-            <p className="text-3xl font-bold text-gray-900">{tripsCount}</p>
+            <div className="mt-2 flex items-center gap-1">
+              <svg aria-hidden="true" className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              <span className="text-xs text-gray-400">planifiés</span>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-500">Points UrbanFlow</span>
+          <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Points</p>
+            <p className="text-3xl font-black text-gray-900">{points}</p>
+            <div className="mt-2 flex items-center gap-1">
+              <svg aria-hidden="true" className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span className="text-xs text-gray-400">UrbanFlow</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900">{points}</p>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-500">CO₂ économisé</span>
+          <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">CO₂ évité</p>
+            <p className="text-3xl font-black text-gray-900">{Number(co2Saved).toFixed(1)}</p>
+            <div className="mt-2 flex items-center gap-1">
+              <svg aria-hidden="true" className="w-3.5 h-3.5 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+              </svg>
+              <span className="text-xs text-gray-400">kg ADEME</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900">{Number(co2Saved).toFixed(1)} kg</p>
           </div>
         </div>
 
         {/* Accès rapide */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <Link href="/dashboard/map" className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition">
-            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-xl">🗺️</div>
+          <Link
+            href="/dashboard/map"
+            className="group flex items-center gap-3 bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:border-green-200 hover:shadow-md transition-all"
+            aria-label="Planifier un itinéraire multimodal"
+          >
+            <div className="w-10 h-10 bg-green-100 group-hover:bg-green-200 rounded-xl flex items-center justify-center text-xl transition" aria-hidden="true">🗺️</div>
             <div>
-              <p className="font-semibold text-gray-900 text-sm">Planifier</p>
+              <p className="font-bold text-gray-900 text-sm">Planifier</p>
               <p className="text-xs text-gray-400">Itinéraire multimodal</p>
             </div>
           </Link>
-          <Link href="/dashboard/covoiturage" className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition">
-            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-xl">🚗</div>
+          <Link
+            href="/dashboard/covoiturage"
+            className="group flex items-center gap-3 bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:border-orange-200 hover:shadow-md transition-all"
+            aria-label="Covoiturage — proposer ou rejoindre un trajet"
+          >
+            <div className="w-10 h-10 bg-orange-100 group-hover:bg-orange-200 rounded-xl flex items-center justify-center text-xl transition" aria-hidden="true">🚗</div>
             <div>
-              <p className="font-semibold text-gray-900 text-sm">Covoiturage</p>
+              <p className="font-bold text-gray-900 text-sm">Covoiturage</p>
               <p className="text-xs text-gray-400">Proposer / rejoindre</p>
             </div>
           </Link>
@@ -155,15 +165,15 @@ export default async function DashboardPage() {
         </div>
 
         {/* CTA + Signalement */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-gradient-to-r from-green-600 to-emerald-500 rounded-2xl p-8 text-white">
-            <h2 className="text-xl font-bold mb-2">Planifier un trajet</h2>
-            <p className="text-green-100 mb-4">
-              Itinéraire multimodal · Gagnez <strong>20 pts</strong> par trajet
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-[#0B1F12] to-[#16401f] rounded-2xl p-7 text-white shadow-lg">
+            <h2 className="text-lg font-black tracking-tight mb-1">Planifier un trajet</h2>
+            <p className="text-green-400 text-sm mb-5">
+              Multimodal · <strong>+20 pts</strong> par trajet
             </p>
             <Link
               href="/dashboard/map"
-              className="inline-block bg-white text-green-700 font-semibold px-6 py-3 rounded-xl hover:bg-green-50 transition"
+              className="inline-flex items-center gap-1 bg-green-500 hover:bg-green-400 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-md"
             >
               Nouveau trajet →
             </Link>
@@ -171,7 +181,9 @@ export default async function DashboardPage() {
 
           {/* Signalement */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h2 className="text-lg font-bold text-gray-900 mb-1">📢 Signaler un problème</h2>
+            <h2 className="text-base font-black text-gray-900 tracking-tight mb-1">
+              <span aria-hidden="true">📢</span> Signaler un problème
+            </h2>
             <p className="text-xs text-gray-400 mb-4">Contribuez à améliorer la mobilité urbaine</p>
             <ReportForm />
           </div>
