@@ -34,6 +34,7 @@ const LEVEL_ICONS: Record<string, string> = {
 export default function MapSidePanel() {
   const [disruptions, setDisruptions] = useState<Disruption[]>([])
   const [reports, setReports] = useState<Report[]>([])
+  const [open, setOpen] = useState(true)
 
   const fetchAll = () => {
     fetch('/api/disruptions')
@@ -55,16 +56,40 @@ export default function MapSidePanel() {
   }, [])
 
   return (
-    <div className="absolute right-0 top-0 bottom-0 z-10 flex items-start pr-3 pointer-events-none" style={{ paddingTop: '180px' }}>
+    <div className="absolute right-0 top-0 bottom-0 z-10 flex items-start pr-3 pointer-events-none" style={{ paddingTop: '260px' }}>
       <div className="pointer-events-auto" style={{ width: '164px' }}>
 
+        {/* Bouton toggle quand fermé */}
+        {!open && (
+          <button
+            onClick={() => setOpen(true)}
+            className="ml-auto flex items-center gap-1.5 bg-white/90 backdrop-blur rounded-xl px-2.5 py-1.5 shadow text-[11px] font-semibold text-gray-600 hover:text-gray-900 transition"
+            style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.12)' }}
+          >
+            ⚠️ Alertes
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+        )}
+
+        {open && (
         <div
           className="rounded-2xl overflow-hidden flex flex-col gap-px"
           style={{ background: 'rgba(255,255,255,0.93)', backdropFilter: 'blur(12px)', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
         >
+            {/* Header avec bouton fermer */}
+            <div className="flex items-center justify-between px-3 pt-2 pb-1">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Info trafic</span>
+              <button
+                onClick={() => setOpen(false)}
+                className="w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition text-[12px]"
+              >
+                ✕
+              </button>
+            </div>
+
             {/* Perturbations */}
             {disruptions.length > 0 && (
-              <div className="px-3 py-2.5">
+              <div className="px-3 pb-2.5">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">⚠️ Perturbations</p>
                 <div className="flex flex-col gap-1.5">
                   {disruptions.slice(0, 4).map(d => (
@@ -81,7 +106,7 @@ export default function MapSidePanel() {
             )}
 
             {/* Séparateur */}
-            {disruptions.length > 0 && reports.length > 0 && (
+            {disruptions.length > 0 && (
               <div style={{ height: '1px', background: 'rgba(0,0,0,0.06)', margin: '0 12px' }} />
             )}
 
@@ -103,6 +128,7 @@ export default function MapSidePanel() {
               )}
             </div>
         </div>
+        )}
       </div>
     </div>
   )
