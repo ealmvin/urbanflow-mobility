@@ -193,6 +193,9 @@ export default function LandingPage() {
             <Link href="/dashboard/map" className="hover:text-gray-700 transition">Explorer la carte</Link>
             <Link href="/register" className="hover:text-gray-700 transition">S&apos;inscrire</Link>
             <Link href="/login" className="hover:text-gray-700 transition">Connexion</Link>
+            <span className="text-gray-200">|</span>
+            <Link href="/mentions-legales" className="hover:text-gray-700 transition">Mentions légales</Link>
+            <Link href="/politique-confidentialite" className="hover:text-gray-700 transition">Confidentialité</Link>
           </div>
         </div>
       </footer>
