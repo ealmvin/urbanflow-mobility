@@ -236,6 +236,34 @@ export default function JourneyResults({ fromName, toName, fromLat, fromLng, toL
           </div>
         )}
 
+        {/* Carte PMR */}
+        {!loading && (
+          <div className="rounded-2xl border-2 border-blue-200 bg-blue-50 overflow-hidden">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">♿</span>
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Itinéraire accessible PMR</p>
+                    <p className="text-xs text-blue-600 font-medium">Transports adaptés & assistance</p>
+                  </div>
+                </div>
+                <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-1 rounded-full">Accessibilité</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">Itinéraire optimisé pour les personnes à mobilité réduite — ascenseurs, quais accessibles, sans escaliers.</p>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&travelmode=transit`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-xs transition"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+                Ouvrir dans Google Maps (accessible)
+              </a>
+            </div>
+          </div>
+        )}
+
         {!loading && routes.map((route) => {
           const isExpanded = expandedId === route.id
 
