@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
+import DeleteAccountModal from '@/components/DeleteAccountModal'
+import FeedbackWidget from '@/components/FeedbackWidget'
 import Logo from '@/components/Logo'
 import Co2Chart from '@/components/Co2Chart'
 import ReportForm from '@/components/ReportForm'
@@ -188,6 +190,23 @@ export default async function DashboardPage() {
             <ReportForm />
           </div>
         </div>
+
+        {/* Feedback utilisateur */}
+        <div className="mt-6 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between gap-4">
+          <div>
+            <p className="font-bold text-gray-900 text-sm">Une remarque sur l'application ?</p>
+            <p className="text-xs text-gray-400 mt-0.5">Votre retour nous aide à améliorer UrbanFlow</p>
+          </div>
+          <FeedbackWidget />
+        </div>
+
+        {/* Zone danger — RGPD droit à l'effacement */}
+        <div className="mt-8 border border-red-100 rounded-2xl p-5 bg-white">
+          <h2 className="text-sm font-bold text-gray-700 mb-1">Zone de danger</h2>
+          <p className="text-xs text-gray-400 mb-3">La suppression de votre compte est définitive et irréversible. Toutes vos données seront effacées conformément au RGPD.</p>
+          <DeleteAccountModal email={user.email ?? ''} />
+        </div>
+
       </main>
     </div>
   )
